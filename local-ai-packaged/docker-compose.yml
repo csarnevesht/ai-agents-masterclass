@@ -66,6 +66,9 @@ services:
     networks: ['demo']
     restart: unless-stopped
     container_name: open-webui
+    environment:
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
     ports:
       - "3000:8080"
     extra_hosts:
@@ -74,17 +77,18 @@ services:
       - open-webui:/app/backend/data
 
   postgres:
-    image: postgres:16-alpine
+    image: ankane/pgvector:v0.5.1
     networks: ['demo']
     restart: unless-stopped
     ports:
-      - 5432:5432
+      - 5555:5432
     environment:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
       - POSTGRES_DB
     volumes:
       - postgres_storage:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -h localhost -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 5s
@@ -156,3 +160,15 @@ services:
     <<: *init-ollama
     depends_on:
       - ollama-gpu
+
+  pgadmin:
+    image: dpage/pgadmin4
+    networks: ['demo']
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
